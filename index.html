@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trò Chơi Câu Cá Trắc Nghiệm - AI & Mạng Máy Tính</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      background: linear-gradient(to bottom, #87CEEB, #e0f6ff);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+
+    #game-container {
+      position: relative;
+      width: 900px;
+      height: 600px;
+      background: #4fc3f7;
+      border-radius: 15px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+      overflow: hidden;
+      border: 4px solid #0288d1;
+    }
+
+    /* Màn hình Login & Kết thúc */
+    .screen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.96);
+      z-index: 10;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    h1 {
+      color: #0277bd;
+      margin-bottom: 15px;
+      font-size: 26px;
+    }
+
+    h2 {
+      color: #01579b;
+      margin-bottom: 15px;
+    }
+
+    input[type="text"] {
+      padding: 12px 20px;
+      width: 300px;
+      font-size: 16px;
+      border: 2px solid #0288d1;
+      border-radius: 25px;
+      outline: none;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    button {
+      padding: 12px 30px;
+      font-size: 16px;
+      font-weight: bold;
+      color: white;
+      background: #0288d1;
+      border: none;
+      border-radius: 25px;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+
+    button:hover {
+      background: #01579b;
+      transform: translateY(-2px);
+    }
+
+    /* Canvas Game */
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* HUD Header */
+    #hud {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      right: 15px;
+      display: flex;
+      justify-content: space-between;
+      color: white;
+      font-size: 18px;
+      font-weight: bold;
+      text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    /* Modal câu hỏi */
+    .modal {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 20;
+    }
+
+    .modal-content {
+      background: white;
+      padding: 25px;
+      border-radius: 15px;
+      max-width: 650px;
+      width: 90%;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    }
+
+    .question-title {
+      font-size: 18px;
+      color: #0277bd;
+      margin-bottom: 20px;
+      font-weight: bold;
+      line-height: 1.4;
+    }
+
+    .options-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .option-btn {
+      padding: 12px;
+      background: #e1f5fe;
+      color: #0277bd;
+      border: 2px solid #81d4fa;
+      border-radius: 10px;
+      font-size: 14px;
+      text-align: left;
+      cursor: pointer;
+      transition: 0.2s;
+      line-height: 1.3;
+    }
+
+    .option-btn:hover {
+      background: #b3e5fc;
+      border-color: #0288d1;
+    }
+
+    .notice-box {
+      background: #fff8e1;
+      border: 2px dashed #ffa000;
+      padding: 15px;
+      border-radius: 10px;
+      margin: 15px 0;
+      color: #e65100;
+      font-weight: bold;
+      font-size: 18px;
+    }
+
+    .score-summary {
+      font-size: 18px;
+      margin-bottom: 15px;
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+
+<div id="game-container">
+  <!-- HUD Header -->
+  <div id="hud" class="hidden">
+    <div>Người chơi: <span id="player-display"></span></div>
+    <div>Điểm: <span id="score-display">0</span></div>
+    <div>Cá đã câu: <span id="caught-display">0</span>/<span id="total-display">10</span></div>
+  </div>
+
+  <!-- Màn hình Đăng nhập -->
+  <div id="login-screen" class="screen">
+    <h1>🎣 TRÒ CHƠI CÂU CÁ TRẮC NGHIỆM</h1>
+    <p style="margin-bottom: 5px; color: #0277bd; font-weight: bold;">Chủ đề: AI - Mạng máy tính - Kiến trúc máy tính</p>
+    <p style="margin-bottom: 20px; color: #555;">Hãy nhập tên để bắt đầu câu cá và trả lời 10 câu hỏi!</p>
+    <input type="text" id="username" placeholder="Nhập tên của bạn..." maxlength="25">
+    <button type="button" id="start-btn">BẮT ĐẦU CHƠI</button>
+  </div>
+
+  <!-- Canvas hiển thị Game -->
+  <canvas id="gameCanvas"></canvas>
+
+  <!-- Modal Câu hỏi -->
+  <div id="question-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="question-title" id="question-text">Nội dung câu hỏi</div>
+      <div class="options-grid" id="options-container"></div>
+    </div>
+  </div>
+
+  <!-- Màn hình Kết thúc -->
+  <div id="end-screen" class="screen hidden">
+    🏆 <h2>HOÀN THÀNH TRÒ CHƠI!</h2>
+    <div class="score-summary">
+      Chúc mừng <strong id="final-player"></strong> đã xuất sắc trả lời hết 10 câu hỏi!<br>
+      Tổng điểm của bạn: <strong id="final-score" style="color: #0288d1; font-size: 26px;">0</strong>
+    </div>
+
+    <!-- Thông báo yêu cầu thiết kế logo -->
+    <div class="notice-box">
+      📌 🎨 YÊU CẦU: 
+      - Nhóm hãy chụp các tấm ảnh hoạt động của đội
+      - Nhóm  hãy thiết kế logo cho câu lạc bộ!
+      - Sản phẩm: Tạo một tấm ảnh ghép các ảnh của nhóm + logo đã tạo và nộp ban tổ chức
+    </div>
+
+    <button type="button" id="finish-btn">KẾT THÚC TRÒ CHƠI & LƯU KẾT QUẢ</button>
+    <p id="save-status" style="margin-top: 10px; color: #2e7d32; font-weight: bold;"></p>
+  </div>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    // Dữ liệu 10 câu hỏi từ tệp Excel kahoot_cau_hoi_ai_mang_kientruc.xlsx
+    const questionsData = [
+      {
+        id: 1,
+        question: "Khái niệm Machine Learning (Học máy) thuộc nhánh nào của Công nghệ thông tin?",
+        options: [
+          "An toàn thông tin",
+          "Mạng máy tính",
+          "Thiết kế đồ họa",
+          "Trí tuệ nhân tạo (AI)"
+        ],
+        correct: 3
+      },
+      {
+        id: 2,
+        question: "Mô hình Học có giám sát (Supervised Learning) cần yếu tố quan trọng nào trong dữ liệu đầu vào?",
+        options: [
+          "Không cần dữ liệu huấn luyện",
+          "Chỉ cần thuật toán di truyền",
+          "Dữ liệu đã được gán nhãn (Label)",
+          "Chỉ cần dữ liệu thô không nhãn"
+        ],
+        correct: 2
+      },
+      {
+        id: 3,
+        question: "Loại mạng thần kinh nhân tạo nào thường được sử dụng phổ biến nhất để xử lý và nhận dạng hình ảnh?",
+        options: [
+          "CNN (Convolutional Neural Network)",
+          "RNN (Recurrent Neural Network)",
+          "Transformer",
+          "MLP (Multilayer Perceptron)"
+        ],
+        correct: 0
+      },
+      {
+        id: 4,
+        question: "Hệ thống khuyến nghị của YouTube gợi ý video dựa trên lịch sử xem của bạn là ứng dụng của:",
+        options: [
+          "Mạng máy tính cục bộ",
+          "Hệ điều hành Windows",
+          "Trí tuệ nhân tạo (AI)",
+          "Kiến trúc von Neumann"
+        ],
+        correct: 2
+      },
+      {
+        id: 5,
+        question: "Giao thức nào chịu trách nhiệm tự động cấp phát địa chỉ IP cho các thiết bị trong mạng?",
+        options: [
+          "DHCP",
+          "DNS",
+          "FTP",
+          "HTTP"
+        ],
+        correct: 0
+      },
+      {
+        id: 6,
+        question: "Tầng nào trong mô hình OSI đảm nhận việc truyền dữ liệu giữa hai thiết bị qua các địa chỉ IP?",
+        options: [
+          "Tầng Liên kết dữ liệu (Data Link)",
+          "Tầng Mạng (Network)",
+          "Tầng Vật lý (Physical)",
+          "Tầng Ứng dụng (Application)"
+        ],
+        correct: 1
+      },
+      {
+        id: 7,
+        question: "Địa chỉ IPv4 bao gồm bao nhiêu bit?",
+        options: [
+          "128 bit",
+          "32 bit",
+          "16 bit",
+          "64 bit"
+        ],
+        correct: 1
+      },
+      {
+        id: 8,
+        question: "Bộ phận nào trong CPU chịu trách nhiệm thực hiện các phép tính số học và logic?",
+        options: [
+          "RAM",
+          "Register (Thanh ghi)",
+          "ALU (Arithmetic Logic Unit)",
+          "CU (Control Unit)"
+        ],
+        correct: 2
+      },
+      {
+        id: 9,
+        question: "Bộ nhớ Cache trong máy tính có vai trò chính là gì?",
+        options: [
+          "Tăng dung lượng lưu trữ dài hạn",
+          "Lưu trữ hệ điều hành cố định",
+          "Tăng tốc độ truy xuất dữ liệu giữa CPU và RAM",
+          "Thay thế hoàn toàn cho ổ cứng SSD"
+        ],
+        correct: 2
+      },
+      {
+        id: 10,
+        question: "Nếu CPU có xung nhịp là 3.0 GHz, điều này có nghĩa là gì?",
+        options: [
+          "Tốc độ truyền dữ liệu mạng là 3 Gbps",
+          "CPU thực hiện tối đa 3 triệu chu kỳ mỗi giây",
+          "Dung lượng bộ nhớ CPU là 3 Gigabyte",
+          "CPU thực hiện 3 tỷ chu kỳ mỗi giây"
+        ],
+        correct: 3
+      }
+    ];
+
+    // Cấu hình URL Google Apps Script WebApp để lưu vào Google Sheets
+    const GOOGLE_SHEET_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbwKIHaKScft-i4x4v2AUxxJsjGH4iMeOf5y-qpfdB8AcmZtAvOquq4JP_m7kd3vNEwn/exec";
+
+    // Trạng thái Game
+    let playerName = "";
+    let score = 0;
+    let currentQuestionIndex = 0;
+    let isModalOpen = false;
+
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = 900;
+    canvas.height = 600;
+
+    // Đối tượng Lưỡi câu
+    const hook = {
+      x: canvas.width / 2,
+      y: 70,
+      startY: 70,
+      speed: 6.5,
+      state: 'idle',
+      targetFish: null
+    };
+
+    let fishes = [];
+    const fishColors = ['#ff7043', '#f4511e', '#ffb74d', '#26a69a', '#ab47bc', '#42a5f5', '#66bb6a'];
+
+    class Fish {
+      constructor(id) {
+        this.id = id;
+        this.reset();
+      }
+
+      reset() {
+        this.x = Math.random() < 0.5 ? -40 : canvas.width + 40;
+        this.y = 170 + Math.random() * 360;
+        this.speed = (1.5 + Math.random() * 2.2) * (this.x < 0 ? 1 : -1);
+        this.size = 24;
+        this.color = fishColors[Math.floor(Math.random() * fishColors.length)];
+        this.caught = false;
+      }
+
+      update() {
+        if (this.caught) {
+          this.x = hook.x;
+          this.y = hook.y + 15;
+          return;
+        }
+
+        this.x += this.speed;
+        if (this.speed > 0 && this.x > canvas.width + 50) this.x = -50;
+        if (this.speed < 0 && this.x < -50) this.x = canvas.width + 50;
+      }
+
+      draw() {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        if (this.speed < 0 && !this.caught) ctx.scale(-1, 1);
+
+        // Thân cá
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, this.size, this.size / 1.6, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Đuôi cá
+        ctx.beginPath();
+        ctx.moveTo(-this.size + 5, 0);
+        ctx.lineTo(-this.size - 12, -12);
+        ctx.lineTo(-this.size - 12, 12);
+        ctx.closePath();
+        ctx.fill();
+
+        // Mắt cá
+        ctx.fillStyle = "white";
+        ctx.beginPath();
+        ctx.arc(this.size / 2 - 2, -4, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "black";
+        ctx.beginPath();
+        ctx.arc(this.size / 2 - 1, -4, 2, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+      }
+    }
+
+    function initFishes() {
+      fishes = [];
+      for (let i = 0; i < questionsData.length; i++) {
+        fishes.push(new Fish(i));
+      }
+      document.getElementById('total-display').innerText = questionsData.length;
+    }
+
+    // Nút Bắt đầu chơi
+    document.getElementById('start-btn').addEventListener('click', function () {
+      const input = document.getElementById('username').value.trim();
+      if (!input) {
+        alert("Vui lòng nhập tên của bạn trước khi bắt đầu!");
+        return;
+      }
+      playerName = input;
+      document.getElementById('player-display').innerText = playerName;
+      document.getElementById('login-screen').classList.add('hidden');
+      document.getElementById('hud').classList.remove('hidden');
+
+      initFishes();
+      gameLoop();
+    });
+
+    // Thả câu
+    canvas.addEventListener('click', (e) => {
+      if (hook.state !== 'idle' || isModalOpen || currentQuestionIndex >= questionsData.length) return;
+
+      const rect = canvas.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      hook.x = clickX;
+      hook.state = 'dropping';
+    });
+
+    // Vòng lặp vẽ Game
+    function gameLoop() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Mặt nước & Thuyền
+      ctx.fillStyle = '#87CEEB';
+      ctx.fillRect(0, 0, canvas.width, 100);
+      ctx.fillStyle = '#0288d1';
+      ctx.fillRect(0, 95, canvas.width, 10);
+
+      ctx.fillStyle = '#8d6e63';
+      ctx.beginPath();
+      ctx.moveTo(hook.x - 30, 85);
+      ctx.lineTo(hook.x + 30, 85);
+      ctx.lineTo(hook.x + 20, 100);
+      ctx.lineTo(hook.x - 20, 100);
+      ctx.closePath();
+      ctx.fill();
+
+      // Cập nhật vị trí lưỡi câu
+      if (hook.state === 'dropping') {
+        hook.y += hook.speed;
+        if (hook.y >= canvas.height - 30) hook.state = 'returning';
+
+        for (let fish of fishes) {
+          if (!fish.caught) {
+            let dist = Math.hypot(hook.x - fish.x, hook.y - fish.y);
+            if (dist < fish.size) {
+              fish.caught = true;
+              hook.targetFish = fish;
+              hook.state = 'returning';
+              break;
+            }
+          }
+        }
+      } else if (hook.state === 'returning') {
+        hook.y -= hook.speed;
+        if (hook.y <= hook.startY) {
+          hook.y = hook.startY;
+          hook.state = 'idle';
+
+          if (hook.targetFish) {
+            showQuestion();
+          }
+        }
+      }
+
+      // Vẽ Dây câu & Lưỡi câu
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(hook.x, 85);
+      ctx.lineTo(hook.x, hook.y);
+      ctx.stroke();
+
+      ctx.strokeStyle = '#ccc';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(hook.x - 4, hook.y, 5, 0, Math.PI);
+      ctx.stroke();
+
+      // Vẽ các con cá
+      fishes.forEach(fish => {
+        fish.update();
+        fish.draw();
+      });
+
+      requestAnimationFrame(gameLoop);
+    }
+
+    function showQuestion() {
+      isModalOpen = true;
+      const q = questionsData[currentQuestionIndex];
+      document.getElementById('question-text').innerText = `Câu ${currentQuestionIndex + 1}/${questionsData.length}: ${q.question}`;
+
+      const container = document.getElementById('options-container');
+      container.innerHTML = '';
+
+      q.options.forEach((opt, idx) => {
+        const btn = document.createElement('button');
+        btn.className = 'option-btn';
+        btn.type = 'button';
+        btn.innerText = `${String.fromCharCode(65 + idx)}. ${opt}`;
+        btn.onclick = () => handleAnswer(idx);
+        container.appendChild(btn);
+      });
+
+      document.getElementById('question-modal').classList.remove('hidden');
+    }
+
+    function handleAnswer(selectedIndex) {
+      const q = questionsData[currentQuestionIndex];
+
+      if (selectedIndex === q.correct) {
+        score += 10;
+        alert("🎉 Chính xác! Bạn nhận được 10 điểm.");
+      } else {
+        alert(`❌ Rất tiếc, chưa đúng! Đáp án đúng là: ${q.options[q.correct]}`);
+      }
+
+      fishes = fishes.filter(f => f !== hook.targetFish);
+      hook.targetFish = null;
+      currentQuestionIndex++;
+
+      document.getElementById('score-display').innerText = score;
+      document.getElementById('caught-display').innerText = currentQuestionIndex;
+      document.getElementById('question-modal').classList.add('hidden');
+      isModalOpen = false;
+
+      if (currentQuestionIndex >= questionsData.length) {
+        setTimeout(showEndScreen, 500);
+      }
+    }
+
+    function showEndScreen() {
+      document.getElementById('final-player').innerText = playerName;
+      document.getElementById('final-score').innerText = `${score} / ${questionsData.length * 10}`;
+      document.getElementById('end-screen').classList.remove('hidden');
+    }
+
+    // Nút Lưu kết quả
+    document.getElementById('finish-btn').addEventListener('click', function () {
+      const btn = this;
+      const status = document.getElementById('save-status');
+      btn.disabled = true;
+      status.innerText = "⏳ Đang gửi dữ liệu lưu vào trang tính Google Drive...";
+
+      const payload = {
+        player: playerName,
+        score: score,
+        totalQuestions: questionsData.length,
+        timestamp: new Date().toLocaleString("vi-VN")
+      };
+
+      if (GOOGLE_SHEET_WEBHOOK_URL === "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL") {
+        setTimeout(() => {
+          status.innerText = "✅ Kết quả trò chơi đã được lưu thành công! (Chế độ mô phỏng)";
+        }, 1000);
+        return;
+      }
+
+      fetch(GOOGLE_SHEET_WEBHOOK_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      }).then(() => {
+        status.innerText = "✅ Kết quả trò chơi đã được lưu trực tiếp vào Google Sheet!";
+      }).catch(err => {
+        status.innerText = "❌ Không thể lưu kết quả. Vui lòng kiểm tra lại cấu hình!";
+        console.error(err);
+        btn.disabled = false;
+      });
+    });
+  });
+</script>
+</body>
+</html>
